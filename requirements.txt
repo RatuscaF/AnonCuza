@@ -155,7 +155,7 @@ platformdirs==4.3.6
 
 plotly== 5.24.1
 
-prompt toolkit==3.0.48
+prompt-toolkit==3.0.48
 
 prometheus_client==0.21.0
 
