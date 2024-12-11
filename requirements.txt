@@ -14,7 +14,7 @@ async-1ru==2.0.4
 
 attrs== 24.2.0
 
-babel={2.16.0
+babel==2.16.0
 
 beautifulsoup4==4.12.3
 
@@ -87,7 +87,9 @@ jsonschema==4.23.0
 
 jsonschema-specifications==2023.12.1
 
-jupyter-events--0.10.0 47 jupyter-1sp==2.2.5
+jupyter-events==0.10.0 47 
+
+jupyter-1sp==2.2.5
 
 jupyter-server-mathjax==0.2.6
 
@@ -179,6 +181,6 @@ PYYAML==6.0.2
 
 pvzmq==26.2.0
 
-referencing--0.35.1
+referencing==0.35.1
 
 
