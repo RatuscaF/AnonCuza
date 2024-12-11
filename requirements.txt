@@ -101,7 +101,7 @@ jupyter_server==2.14.2
 
 Jupyter_server_terminals==0.5.3
 
-jupyter lab==4.2.5
+jupyter_lab==4.2.5
 
 jupyterlab_git==0.50.1
 
