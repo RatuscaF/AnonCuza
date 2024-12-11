@@ -87,7 +87,7 @@ jsonschema==4.23.0
 
 jsonschema-specifications==2023.12.1
 
-jupyter-events==0.10.0 47 
+jupyter-events==0.10.0
 
 jupyter-1sp==2.2.5
 
