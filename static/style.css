@@ -10897,12 +10897,12 @@ body.sb-sidenav-toggled #wrapper #sidebar-wrapper {
   }
 
   .navbar .btn {
-      padding: 0.25rem 0.5rem; /* Reduce button size */
+      /*padding: 0.25rem 0.5rem; /* Reduce button size */
       font-size: 0.85rem; /* Adjust button font size */
   }
 
   .navbar-toggler {
-      padding: 0.25rem; /* Reduce toggle button padding */
+      /*padding: 0.25rem; /* Reduce toggle button padding */
       
   }
 }
