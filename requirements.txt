@@ -1,31 +1,31 @@
-Flask==2.2.2
-gunicorn==20.1.0
-flask_sqlalchemy==2.5.1
-flask_migrate==3.1.0
-flask_wtf==1.0.1
-requests==2.28.1
+Flask
+gunicorn
+flask_sqlalchemy
+flask_migrate
+flask_wtf
+requests
 
-Werkzeug==2.0.3
+Werkzeug
 
 
 
-platformdirs==4.3.6
+platformdirs
 
-plotly== 5.24.1
+plotly
 
-prompt-toolkit==3.0.48
+prompt-toolkit
 
-prometheus_client==0.21.0
+prometheus_client
 
-psutil==6.0.0
+psutil
 
-ptyprocess==0.7.0
+ptyprocess
 
-pure_eval==0.2.3
+pure_eval
 
-Pygments==2.18.0
+Pygments
 
-pyparsing==3.1.4
+pyparsing
 
-python-json-logger==2.0.7
+python-json-logger
 
