@@ -1,7 +1,5 @@
 
 
-senyio==4.6.0
-
 argon2-cff1==23.1.0
 
 argon2-cffi-bindings==21.2.0
