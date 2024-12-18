@@ -1,0 +1,65 @@
+{% extends 'base.html' %} 
+
+{% block body %} 
+<div id="chat-container">
+    <div id="messages">
+        {% for message in messages %}
+        <div class="message">
+            <span class="timestamp">{{ message.timestamp.strftime(' %H:%M') }}</span>: 
+            <h6 class="content">{{ message.content }}</h6>
+            
+        </div>
+        {% endfor %}
+    </div>
+    <div id="input-container">
+        <input id="message-input" type="text" placeholder="Type a message..." />
+        <button id="send-button">Send</button>
+    </div>
+</div>
+
+<script>
+    const socket = io();
+    const messagesDiv = document.getElementById("messages");
+    const messageInput = document.getElementById("message-input");
+    const sendButton = document.getElementById("send-button");
+
+    function appendMessage(msg, timestamp) {
+        const messageElement = document.createElement("div");
+        messageElement.classList.add("message");
+
+        const timestampElement = document.createElement("span");
+        timestampElement.classList.add("timestamp");
+        timestampElement.textContent = `${timestamp}`;
+
+        const contentElement = document.createElement("span");
+        contentElement.classList.add("content");
+        contentElement.textContent = `: ${msg}`;
+
+        messageElement.appendChild(timestampElement);
+        messageElement.appendChild(contentElement);
+        messagesDiv.appendChild(messageElement);
+        
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function sendMessage() {
+        const message = messageInput.value.trim();
+        if (message) {
+            socket.emit('send_message', { message: message });
+            messageInput.value = "";
+        }
+    }
+
+    sendButton.addEventListener("click", sendMessage);
+    messageInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            sendMessage();
+        }
+    });
+
+    socket.on('message', (data) => {
+        appendMessage(data.message, data.timestamp);
+    });
+</script>
+
+{% endblock %}

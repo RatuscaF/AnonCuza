@@ -1,0 +1,29 @@
+
+{% extends 'base.html' %} 
+    
+{%block head %} 
+
+{% endblock %}
+
+{%block body %} 
+<div class="container mt-5">
+
+    {% for post in posts %}
+    <div class="card mb-3">
+        <div class="card-body">
+            <p class="card-text">
+                <a href="/post/{{ post.id }}"> {{ post.content | truncate(350, True) }}</a>
+            </p>
+            <small class="text-muted">Posted on {{ post.date_created.strftime(' %H:%M') }}</small>
+        </div>
+    </div>
+    {% else %}
+    <p>No posts yet! Click "Create New Post" to add one.</p>
+    {% endfor %}
+    <!--<div class="d-grid gap-2 d-md-block">
+        <a href="/create" class="btn btn-success rounded-circle shadow floating-btn p-5 btn-sm" type="button">
+            <i class="bi bi-plus"></i>
+        </a>
+    </div>-->
+</div>
+{% endblock %}
