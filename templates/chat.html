@@ -1,0 +1,118 @@
+{% extends 'base.html' %} 
+
+
+
+{% block head %}
+<style>
+    html, body {
+        height: 100%; /* Ensure the page takes up the full viewport height */
+        margin: 0;    /* Remove default margins */
+        overflow: hidden; /* Disable scrolling for the entire page */
+    }
+
+    #chat-container {
+        display: flex;
+        flex-direction: column;
+        height: 100%; /* Full height for the chat container */
+    }
+
+    #messages {
+        flex: 1; /* Take up remaining space in the container */
+        overflow-y: auto; /* Enable scrolling within the chat messages */
+        padding: 10px; /* Add some spacing around the messages */
+    }
+
+    #input-container {
+        border-top: 1px solid #ddd; /* Separate input from messages */
+        padding: 10px;
+        background-color: #f8f9fa;
+    }
+</style>
+{%endblock %}
+
+
+{% block body %} 
+<div id="chat-container">
+    <div id="messages">
+        <pre>    </pre>
+        The start of the chat
+        {% for message in messages %}
+        <div class="message {% if message.user_id == current_user.id %}current-user{% else %}other-user{% endif %}">
+            <div class="username">{{ message.user.username }}</div>
+            <div class="content" >{{ message.content }}</div>
+            <div class="timestamp">{{ message.timestamp.strftime(' %H:%M') }}</div> 
+        </div>
+        {% endfor %}
+    </div>
+    <pre>    </pre>
+    <pre>    </pre>
+    <div id="input-container">
+        <input id="message-input" type="text" placeholder="Type a message..." />
+        <button id="send-button">Send</button>
+    </div>
+</div>
+
+<script>
+    const socket = io();
+    const messagesDiv = document.getElementById("messages");
+    const messageInput = document.getElementById("message-input");
+    const sendButton = document.getElementById("send-button");
+
+    document.addEventListener('DOMContentLoaded', () => { 
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+
+
+    function appendMessage(msg, timestamp, isCurrentUser, username) {
+        const messageElement = document.createElement("div");
+        messageElement.classList.add("message");
+
+        if (isCurrentUser) {
+            messageElement.classList.add("current-user");
+        } else {
+            messageElement.classList.add("other-user");
+        }
+        
+        const usernameElement = document.createElement("div");
+        usernameElement.classList.add("username");
+        usernameElement.textContent = username;
+
+        const contentElement = document.createElement("div");
+        contentElement.classList.add("content");
+        contentElement.textContent = msg;
+
+        const timestampElement = document.createElement("div");
+        timestampElement.classList.add("timestamp");
+        timestampElement.textContent = timestamp;
+
+        
+        messageElement.appendChild(usernameElement);
+        messageElement.appendChild(contentElement);
+        messageElement.appendChild(timestampElement);
+        messagesDiv.appendChild(messageElement);
+        
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function sendMessage() {
+        const message = messageInput.value.trim();
+        if (message) {
+            socket.emit('send_message', { message: message });
+            messageInput.value = "";
+        }
+    }
+
+    sendButton.addEventListener("click", sendMessage);
+    messageInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            sendMessage();
+        }
+    });
+
+    socket.on('message', (data) => {
+        const isCurrentUser = data.user_id === parseInt("{{ current_user.id }}", 10);
+        appendMessage(data.message, data.timestamp, isCurrentUser, data.username);
+    });
+</script>
+
+{% endblock %}

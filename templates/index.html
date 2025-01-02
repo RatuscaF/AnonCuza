@@ -1,0 +1,57 @@
+
+{% extends 'base.html' %} 
+    
+{%block head %} 
+
+{% endblock %}
+
+{%block body %} 
+<div class="container mt-5">
+
+    <div class="d-flex justify-content-end mb-3">
+        <a href="{{ url_for('index', sort_by='newest') }}" 
+           class="btn btn-outline-primary me-2 {{ 'active' if sort_by == 'newest' else '' }}">
+           Newest
+        </a>
+        <a href="{{ url_for('index', sort_by='likes') }}" 
+           class="btn btn-outline-primary me-2 {{ 'active' if sort_by == 'likes' else '' }}">
+           Most Liked (All Time)
+        </a>
+        <a href="{{ url_for('index', sort_by='most_liked_today') }}" 
+           class="btn btn-outline-primary me-2 {{ 'active' if sort_by == 'most_liked_today' else '' }}">
+           Most Liked (Today)
+        </a>
+    </div>
+
+
+
+    {% for post in posts %}
+    <div class="card mb-3">
+        <div class="card-body">
+            <p class="card-text">
+                <a href="/post/{{ post.id }}"> {{ post.content | truncate(350, True) }}</a>
+            </p>
+            
+
+            <div class="d-flex align-items-center gap-2">
+                <small class="text-muted">Posted on {{ post.date_created.strftime(' %H:%M') }}</small>
+                <form action="{{ url_for('like_post', post_id=post.id) }}" method="post" class="m-0 position-absolute  end-0 px-2">
+                    <input type="hidden" name="redirect_url" value="{{ request.path }}">
+                    <button type="submit" class="btn btn-outline-primary btn-sm">👍 Like ({{ post.likes }})</button>
+                </form>
+
+
+            </div>
+        
+        </div>
+    </div>
+    {% else %}
+    <p>No posts yet! Click "Create New Post" to add one.</p>
+    {% endfor %}
+    <!--<div class="d-grid gap-2 d-md-block">
+        <a href="/create" class="btn btn-success rounded-circle shadow floating-btn p-5 btn-sm" type="button">
+            <i class="bi bi-plus"></i>
+        </a>
+    </div>-->
+</div>
+{% endblock %}

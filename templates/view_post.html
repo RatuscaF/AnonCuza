@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block body %}
+<div class="container mt-5">
+
+    <a href="/index" class="btn btn-secondary mb-3">Back to Posts</a>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <p>{{ post.content | nl2br | safe }}</p>
+        </div>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+        <form action="{{ url_for('like_post', post_id=post.id) }}" method="post" class="m-0">
+            <input type="hidden" name="redirect_url" value="{{ request.path }}">
+            <button type="submit" class="btn btn-outline-primary btn-sm">👍 Like ({{ post.likes }})</button>
+        </form>
+    </div>
+
+
+    <h3>Comments</h3>
+    <!-- Recursive Function to Render Comments -->
+
+    <!-- New Comment Form -->
+    <form method="POST" action="{{ url_for('create_comment', post_id=post.id) }}">
+        <div class="mb-3">
+            <textarea class="form-control" name="content" placeholder="Add a comment..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+    <br>
+    <ul class="list-unstyled">
+        {% for comment in post.comments %}
+        
+            <li>
+                <div class="card mb-3 shadow-sm">
+                    <p class="fw-bold ms-2">Commenter #{{ user_numbers[comment.user_id] }}</p>
+                    <p class="ms-2" style="word-wrap: break-word; white-space: normal;">
+                        {{ comment.content | nl2br | safe }}
+                    </p>
+                    <div class="d-flex align-items-center gap-2 ms-2">
+                        <form method="POST" action="{{ url_for('like_comment', comment_id=comment.id) }}" class="mb-2">
+                            <button type="submit" class="btn btn-outline-primary btn-sm">
+                                👍 Like ({{ comment.like_count }})
+                            </button>
+                        </form>
+                        
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm ms-0 toggle-reply-btn " >Reply</button>
+
+
+                     <!-- Button to Show Reply Form -->
+                    
+
+
+                    <!-- Reply Form -->
+                    <form method="POST" action="{{ url_for('create_comment', post_id=post.id) }}" class="reply-form d-none">
+                        <input type="hidden" name="parent_id" value="{{ comment.id }}">
+                        <div class="mb-3">
+                            <textarea class="form-control " name="content" placeholder="Reply to this comment..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-secondary btn-sm ms-0 btn-sm">Submit</button>
+                    </form>
+                </div>
+                <!-- Render Replies -->
+                {% if comment.replies %}
+                    <ul class="list-unstyled ms-4">
+                        {% for reply in comment.replies %}
+                            <li>
+                                <div class="card mb-3 shadow-sm">
+                                    <p class="fw-bold ms-2">Reply by Commenter #{{ user_numbers[reply.user_id] }}</p>
+                                    <p class="ms-2" style="word-wrap: break-word; white-space: normal;">
+                                        {{ reply.content | nl2br | safe }}
+                                    </p>
+                                    <div class="d-flex align-items-center gap-2 ms-2">
+                                        <form method="POST" action="{{ url_for('like_comment', comment_id=reply.id) }}" class="mb-2 ">
+                                            <button type="submit" class="btn btn-outline-primary btn-sm">
+                                                👍 Like ({{ reply.like_count }})
+                                            </button>
+                                        </form>
+                                        <br>
+                                    </div>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </li>
+        {% else %}
+            <p>No comments yet. Be the first to comment!</p>
+        {% endfor %}
+    </ul>
+
+
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Add event listeners to all toggle buttons
+        const toggleReplyButtons = document.querySelectorAll('.toggle-reply-btn');
+        toggleReplyButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const replyForm = button.nextElementSibling;
+                if (replyForm) {
+                    replyForm.classList.toggle('d-none');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
