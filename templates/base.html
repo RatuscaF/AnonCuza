@@ -14,6 +14,24 @@
 
     {%block head %}{% endblock %}
     <link rel="stylesheet" href="{{ url_for('static', filename= 'style.css')}}">
+
+    <script>
+        if (window.location.pathname === '/') {
+            // Save and restore scroll position
+            
+            window.addEventListener('beforeunload', function () {
+                sessionStorage.setItem('scrollPosition', window.scrollY);
+            });
+
+            window.addEventListener('load', function () {
+                const scrollPosition = sessionStorage.getItem('scrollPosition');
+                if (scrollPosition !== null) {
+                    window.scrollTo({ top: parseInt(scrollPosition, 10), behavior: 'auto' });
+                }
+            });
+           
+        }
+    </script>
 </head>
 
 <body>
@@ -27,7 +45,8 @@
                 <a class="dropdown-item" href="{{url_for('index')}}">Home</a>
                 <a class="dropdown-item" href="{{url_for('create_post')}}">Create post</a>
                 <a class="dropdown-item" href="{{url_for('chat')}}">Chat</a>
-                <a class="dropdown-item" href="{{url_for('chat')}}">Log out</a>
+                <a class="dropdown-item" href="{{url_for('my_posts')}}">My Profile</a>
+                <a class="dropdown-item" href="{{url_for('logout')}}">Log out</a>
             </div>
         </div>
         <h1>AnonCuza</h1>
@@ -43,11 +62,8 @@
 
     </div>
     
-    <script>
 
-
-
-    </script>
+    
 
     
 </body>

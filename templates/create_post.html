@@ -1,14 +1,23 @@
+{% extends 'base.html' %}
 
-{% extends 'base.html' %} 
-    
-{%block head %} 
-    
-{% endblock %}
-
-{%block body %} 
-
+{% block body %}
 <div class="container mt-5">
     <h1 class="mb-4">Create a New Post</h1>
+
+    <!-- Flash messages specifically for spamming -->
+    {% with messages = get_flashed_messages(with_categories=True) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                {% if category == 'warning' %} <!-- Only display warning for spamming -->
+                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
     <form action="/create" method="POST">
         <div class="mb-3">
             <label for="content" class="form-label">Content</label>
@@ -17,7 +26,6 @@
         <div class="form-row col-auto">
             <button type="submit" class="btn btn-primary">Create Post</button>
         </div>
-       
     </form>
 </div>
 {% endblock %}

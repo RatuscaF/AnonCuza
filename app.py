@@ -2,13 +2,15 @@ import eventlet  # First import
 eventlet.monkey_patch()  # Monkey patching must be done right after importing eventlet
 
 import os
-from flask import Flask, flash, render_template, request, redirect, url_for
+from flask import Flask, flash, render_template, request, redirect, url_for, jsonify, request
 from flask_sqlalchemy import SQLAlchemy; # Database
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask_socketio import SocketIO, send, emit
 from datetime import datetime, timezone, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
+from dotenv import load_dotenv
+
 
 EET = timezone(timedelta(hours=2))  # Standard time (UTC +2)
 EEST = timezone(timedelta(hours=3))  # Daylight saving time (UTC +3)
@@ -22,7 +24,11 @@ current_time_eest = datetime.now(EEST)  # Use UTC+3 for daylight saving time
 print("Current time in EEST:", current_time_eest)
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.urandom(24)  # Generates a random 24-byte key
+# Use environment variable for security
+
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'ratuscaEfrumoasa')
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=364)  # Set session lifetime
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=364)  # Set remember cookie duration
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'  # Redirect unauthorized users to the login page
@@ -31,6 +37,7 @@ login_manager.login_view = 'login'  # Redirect unauthorized users to the login p
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 db = SQLAlchemy(app)
 socketio = SocketIO(app)  # Initialize SocketIO
+load_dotenv()  # Load environment variables from .env file
 
 #Models
 class User(db.Model, UserMixin):
@@ -38,6 +45,7 @@ class User(db.Model, UserMixin):
     username = db.Column(db.String(150), unique=True, nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
+    last_post_created = db.Column(db.DateTime, nullable=True)  
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -50,8 +58,16 @@ class Post(db.Model):
     content = db.Column(db.String(), nullable=False)
     date_created = db.Column(db.DateTime, default=lambda: datetime.now(EET))  # Set timezone to EET (UTC+2)
     likes = db.Column(db.Integer, default=0)  # Number of likes
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Add this line
+    user = db.relationship('User', backref=db.backref('posts', lazy=True))     # Add this line
     comments = db.relationship('Comment', primaryjoin="and_(Comment.post_id==Post.id, Comment.parent_id==None)", backref='post', lazy=True)
-
+    # In your Post class, add this method:
+    def get_comment_count(self):
+        # Count top-level comments
+        top_level_count = len(self.comments)
+        # Count replies
+        replies_count = sum(len(comment.replies) for comment in self.comments)
+        return top_level_count + replies_count
 
 
     def __repr__(self):
@@ -110,7 +126,7 @@ def assign_user_numbers(comments):
 
 
 # Routes
-@app.route('/index')
+@app.route('/')
 @login_required
 def index():
     sort_by = request.args.get('sort_by', 'newest')
@@ -126,24 +142,52 @@ def index():
     else:  # Default to sorting by newest
         posts = Post.query.order_by(Post.date_created.desc()).all()
     
-    return render_template('index.html', posts=posts, sort_by=sort_by)
+    return render_template('index.html', posts=posts, sort_by=sort_by, current_time=datetime.now(EET))
 
 
 
-@app.route('/create', methods=['GET','POST'])
+@app.route('/create', methods=['GET', 'POST'])
 @login_required
 def create_post():
     if request.method == 'POST':
         content = request.form['content']
 
         if not content:
-            return "Title and Content are required!", 400   
+            return "Content is required!", 400
 
-        new_post = Post(content=content)
+        # Cooldown period
+        cooldown_period = timedelta(seconds=30)
+        now = datetime.now()  # Make timezone-naive
+
+        # Check if user needs to wait
+        if current_user.last_post_created:
+            if now - current_user.last_post_created < cooldown_period:
+                remaining_time = cooldown_period - (now - current_user.last_post_created)
+                flash(f"Please wait {remaining_time.seconds} seconds before posting again.", "warning")
+                return redirect(url_for('create_post'))
+
+        # Update the last post created time
+        current_user.last_post_created = now
+        db.session.commit()
+
+        # Create the new post
+        new_post = Post(content=content, user_id=current_user.id)
         db.session.add(new_post)
         db.session.commit()
+
+        flash("Post created successfully!", "success")
         return redirect(url_for('index'))
+
     return render_template("create_post.html")
+
+
+# In app.py, add this route
+@app.route('/my_posts')
+@login_required
+def my_posts():
+    posts = Post.query.filter_by(user_id=current_user.id)\
+        .order_by(Post.date_created.desc()).all()
+    return render_template('my_posts.html', posts=posts)
 
 
 # Custom filter to replace newlines with <br> tags
@@ -190,10 +234,11 @@ def login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
+        remember = True if request.form.get('remember') else False
 
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
-            login_user(user)
+            login_user(user, remember=remember)
             flash("Logged in successfully!", "success")
             return redirect(url_for('index'))
         else:
@@ -317,6 +362,8 @@ def handle_message(data):
 
 
 
+
+
 #Error handlers
 @app.errorhandler(404)
 def page_not_found(e):
@@ -326,12 +373,12 @@ def page_not_found(e):
 def internal_server_error(e):
     return render_template('500.html'), 500
 
-
 if __name__ == "__main__":
-
     with app.app_context():
         db.create_all()
-
-    #app.run(host='0.0.0.0', port=5000, debug=True)
-
+    
+    # Remove or comment out this line
+    # app.run(host='0.0.0.0', port=5000, debug=True)
+    
+    # Only use this line with eventlet
     socketio.run(app, host='0.0.0.0', port=5000, debug=True)
