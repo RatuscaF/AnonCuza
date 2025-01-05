@@ -9,7 +9,7 @@ from datetime import datetime, timezone, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
 from dotenv import load_dotenv
-
+from flask_wtf.csrf import CSRFProtect, CSRFError
 
 EET = timezone(timedelta(hours=2))  # Standard time (UTC +2)
 EEST = timezone(timedelta(hours=3))  # Daylight saving time (UTC +3)
@@ -32,7 +32,9 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login' 
 
 socketio = SocketIO(app, cors_allowed_origins="*")  
-
+csrf = CSRFProtect(app)
+app.config['WTF_CSRF_ENABLED'] = True
+app.config['WTF_CSRF_TIME_LIMIT'] = 3600
 load_dotenv()
 
 #Models
@@ -447,6 +449,10 @@ def handle_message(data):
             'username': current_user.username  
         }, broadcast=True)
 
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    return render_template('error.html', error="CSRF token validation failed."), 400
 
 @app.errorhandler(500)
 def internal_server_error(e):

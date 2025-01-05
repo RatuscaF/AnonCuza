@@ -31,6 +31,7 @@
     
         });
     </script>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="{{ url_for('static', filename='js/infinite_scroll.js') }}"></script>
 </head>
 
@@ -62,7 +63,11 @@
 
     </div>
     
-
+    <div class="container mt-5">
+        <div class="alert alert-danger">
+            {{ error }}
+        </div>
+    </div>
     
 
     
