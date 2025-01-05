@@ -28,7 +28,6 @@ app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=364)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 db = SQLAlchemy(app)
-
 login_manager = LoginManager(app)
 login_manager.login_view = 'login' 
 
@@ -465,3 +464,5 @@ if __name__ == "__main__":
     
     # Only use this line with eventlet
     socketio.run(app, host='0.0.0.0', port=5000, debug=False)
+
+application = socketio.WSGIApp(socketio, app)
