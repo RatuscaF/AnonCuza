@@ -30,3 +30,8 @@ instance/
 .webassets-cache
 .DS_Store
 database.db
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
