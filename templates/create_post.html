@@ -19,7 +19,6 @@
     {% endwith %}
 
     <form action="/create" method="POST">
-        {{ csrf_token() }}
         <div class="mb-3">
             <label for="content" class="form-label">Content</label>
             <textarea name="content" id="content" rows="18" class="form-control" required></textarea>

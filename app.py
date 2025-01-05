@@ -24,17 +24,18 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'ratuscaEfrumoasa')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=364)  
 app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=364) 
-
+app.config['WTF_CSRF_CHECK_DEFAULT'] = False  # Disable default CSRF checking
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 db = SQLAlchemy(app)
+
 login_manager = LoginManager(app)
 login_manager.login_view = 'login' 
 
-socketio = SocketIO(app, cors_allowed_origins="*")  
 csrf = CSRFProtect(app)
-app.config['WTF_CSRF_ENABLED'] = True
-app.config['WTF_CSRF_TIME_LIMIT'] = 3600
+
+socketio = SocketIO(app, cors_allowed_origins="*")  
+
 load_dotenv()
 
 #Models
@@ -132,19 +133,21 @@ def assign_user_numbers(comments, post_creator_id):
                 reply.user_number = user_numbers[reply.user_id]
     return user_numbers
 
+
+
 # Routes
 
 @app.route('/api/posts')
 @login_required
 def get_posts():
     page = request.args.get('page', 1, type=int)
-    per_page = 10
+    per_page = 10  # Number of posts per request
     sort_by = request.args.get('sort_by', 'newest')
     
-
+    # Calculate offset
     offset = (page - 1) * per_page
     
-
+    # Query based on sort parameter
     if sort_by == 'likes':
         posts = Post.query.order_by(Post.likes.desc(), Post.date_created.desc())
     elif sort_by == 'most_liked_today':
@@ -152,13 +155,13 @@ def get_posts():
         today_end = datetime.now(EET).replace(hour=23, minute=59, second=59, microsecond=999999)
         posts = Post.query.filter(Post.date_created.between(today_start, today_end))\
             .order_by(Post.likes.desc(), Post.date_created.desc())
-    else: 
+    else:  # Default to newest
         posts = Post.query.order_by(Post.date_created.desc())
     
-
+    # Apply pagination
     posts = posts.offset(offset).limit(per_page).all()
     
-
+    # Convert posts to JSON
     posts_data = []
     current_time = datetime.now(EET)
     for post in posts:
@@ -169,7 +172,7 @@ def get_posts():
             'likes': post.likes,
             'comment_count': post.get_comment_count(),
             'user_id': post.user_id,
-            'username': post.user.username 
+            'username': post.user.username  # Add username for display
         })
     
     return jsonify(posts_data)
@@ -178,9 +181,9 @@ def get_posts():
 @login_required
 def get_my_posts():
     page = request.args.get('page', 1, type=int)
-    per_page = 10  
+    per_page = 10  # Number of posts per request
     
-
+    # Calculate offset
     offset = (page - 1) * per_page
     
     # Query user's posts with pagination
@@ -190,7 +193,7 @@ def get_my_posts():
         .limit(per_page)\
         .all()
     
-
+    # Convert posts to JSON
     posts_data = []
     for post in posts:
         posts_data.append({
@@ -218,7 +221,7 @@ def index():
         posts = Post.query.filter(Post.date_created.between(today_start, today_end)).order_by(Post.likes.desc()).all()
     elif sort_by == 'most_liked_all_time':
         posts = Post.query.order_by(Post.likes.desc()).all()
-    else:  
+    else:  # Default to sorting by newest
         posts = Post.query.order_by(Post.date_created.desc()).all()
     
     return render_template('index.html', posts=posts, sort_by=sort_by, current_time=datetime.now(EET))
@@ -236,7 +239,7 @@ def create_post():
 
         # Cooldown period
         cooldown_period = timedelta(seconds=30)
-        now = datetime.now()  
+        now = datetime.now()  # Make timezone-naive
 
         # Check if user needs to wait
         if current_user.last_post_created:
@@ -260,7 +263,7 @@ def create_post():
     return render_template("create_post.html")
 
 
-
+# In app.py, add this route
 @app.route('/my_posts')
 @login_required
 def my_posts():
@@ -269,11 +272,11 @@ def my_posts():
     return render_template('my_posts.html', posts=posts)
 
 
-
+# Custom filter to replace newlines with <br> tags
 def nl2br(value):
     return value.replace("\n", "<br>")
 
-
+# Register the custom filter
 app.jinja_env.filters['nl2br'] = nl2br
 
 
@@ -297,7 +300,7 @@ def register():
             flash("Email already exists. Please use a different email.", "danger")
             return redirect(url_for('register'))
 
-
+        # If no conflicts, create the user
         new_user = User(username=username, email=email)
         new_user.set_password(password)
         db.session.add(new_user)
@@ -337,7 +340,7 @@ def dashboard():
     return render_template('dashboard.html', user=current_user)
 
 
-
+# Update route with correct parameter
 @app.route('/post/<int:id>')
 def view_post(id):
     post = Post.query.get_or_404(id)
@@ -357,7 +360,7 @@ def view_post(id):
 
 @app.context_processor
 def inject_current_path():
-
+    # Pass `path` and `endpoint` to all templates
     return {
         'current_path': request.path,
         'current_endpoint': request.endpoint
@@ -414,7 +417,7 @@ def like_comment(comment_id):
 @app.route('/comment/<int:post_id>', methods=['POST'])
 def create_comment(post_id):
     content = request.form['content']
-    parent_id = request.form.get('parent_id')  
+    parent_id = request.form.get('parent_id')  # Get parent_id if it's a reply
     
     if not content:
         flash("Comment content is required!", "danger")
@@ -430,7 +433,7 @@ def create_comment(post_id):
 @app.route('/chat')
 @login_required
 def chat():
-    messages = Message.query.order_by(Message.timestamp.asc()).all()  
+    messages = Message.query.order_by(Message.timestamp.asc()).all()  # Load all messages
     return render_template('chat.html', messages=messages)
 
 @socketio.on('send_message')
@@ -442,17 +445,23 @@ def handle_message(data):
         db.session.add(new_message)
         db.session.commit()
 
+        # Broadcast message to all clients with user info
         emit('message', {
             'message': message_content,
             'timestamp': new_message.timestamp.strftime('%H:%M'),
-            'user_id': current_user.id,  
-            'username': current_user.username  
+            'user_id': current_user.id,  # Pass user ID for styling
+            'username': current_user.username  # Pass username for display
         }, broadcast=True)
 
 
+
+
+# Error handlers
 @app.errorhandler(CSRFError)
 def handle_csrf_error(e):
-    return render_template('error.html', error="CSRF token validation failed."), 400
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'error': 'CSRF token is missing or invalid'}), 400
+    return render_template('error.html', error='CSRF token is missing or invalid'), 400
 
 @app.errorhandler(500)
 def internal_server_error(e):
@@ -462,4 +471,8 @@ if __name__ == "__main__":
     with app.app_context():
         db.create_all()
     
+    # Remove or comment out this line
+    # app.run(host='0.0.0.0', port=5000, debug=True)
+    
+    # Only use this line with eventlet
     socketio.run(app, host='0.0.0.0', port=5000, debug=False)

@@ -13,14 +13,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.js"></script>
 
     {%block head %}{% endblock %}
-
     <link rel="stylesheet" href="{{ url_for('static', filename= 'style.css')}}">
 </head>
 <body>
     <div class="container d-flex justify-content-center align-items-center" style="min-height: 100vh;">
         <div class="col-md-4 p-4 border rounded shadow-sm">
             <form method="POST">
-                {{ csrf_token() }}
                 <h1 class="text-center mb-4">Login</h1>
                 <div class="mb-3">
                     <input type="email" name="email" placeholder="Email" class="form-control" required>
