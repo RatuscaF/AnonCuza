@@ -4,30 +4,5 @@
 <div class="container mt-5">
     <h2 class="mb-4">My Posts</h2>
 
-    {% for post in posts %}
-    <div class="card mb-3">
-        <div class="card-body">
-            <p class="card-text">
-                <a href="{{ url_for('view_post', id=post.id) }}">
-                    {{ post.content | truncate(350, True) }}
-                </a>
-            </p>
-            <div class="d-flex align-items-center gap-2">
-                <small class="text-muted">Posted on {{ post.date_created.strftime('%Y-%m-%d %H:%M') }}</small>
-                <div class="d-flex gap-2 position-absolute end-0 px-2">
-                    <a href="{{ url_for('view_post', id=post.id) }}" class="btn btn-outline-secondary btn-sm">
-                        💬 Comments ({{ post.get_comment_count() }})
-                    </a>
-                    <form action="{{ url_for('like_post', post_id=post.id) }}" method="post" class="m-0">
-                        <input type="hidden" name="redirect_url" value="{{ request.path }}">
-                        <button type="submit" class="btn btn-outline-secondary btn-sm">👍 Like ({{ post.likes }})</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% else %}
-    <p>You haven't created any posts yet!</p>
-    {% endfor %}
 </div>
 {% endblock %}

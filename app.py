@@ -1,6 +1,5 @@
-import eventlet  # First import
-eventlet.monkey_patch()  # Monkey patching must be done right after importing eventlet
-
+import eventlet  
+eventlet.monkey_patch()  
 import os
 from flask import Flask, flash, render_template, request, redirect, url_for, jsonify, request
 from flask_sqlalchemy import SQLAlchemy; # Database
@@ -10,34 +9,34 @@ from datetime import datetime, timezone, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
 from dotenv import load_dotenv
-
+from flask_wtf.csrf import CSRFProtect, CSRFError
 
 EET = timezone(timedelta(hours=2))  # Standard time (UTC +2)
 EEST = timezone(timedelta(hours=3))  # Daylight saving time (UTC +3)
 
-# Get the current time in Eastern European Time (EET)
-current_time_eet = datetime.now(EET)  # Use UTC+2 for standard time
+#Eastern European Time (EET)
+current_time_eet = datetime.now(EET) 
 print("Current time in EET:", current_time_eet)
-
-# Get the current time in Eastern European Summer Time (EEST)
 current_time_eest = datetime.now(EEST)  # Use UTC+3 for daylight saving time
 print("Current time in EEST:", current_time_eest)
 
 app = Flask(__name__)
-# Use environment variable for security
-
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'ratuscaEfrumoasa')
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=364)  # Set session lifetime
-app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=364)  # Set remember cookie duration
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=364)  
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=364) 
+app.config['WTF_CSRF_CHECK_DEFAULT'] = False  # Disable default CSRF checking
 
-login_manager = LoginManager(app)
-login_manager.login_view = 'login'  # Redirect unauthorized users to the login page
-
-# Configure databases
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 db = SQLAlchemy(app)
-socketio = SocketIO(app)  # Initialize SocketIO
-load_dotenv()  # Load environment variables from .env file
+
+login_manager = LoginManager(app)
+login_manager.login_view = 'login' 
+
+csrf = CSRFProtect(app)
+
+socketio = SocketIO(app, cors_allowed_origins="*")  
+
+load_dotenv()
 
 #Models
 class User(db.Model, UserMixin):
@@ -56,19 +55,22 @@ class User(db.Model, UserMixin):
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.String(), nullable=False)
-    date_created = db.Column(db.DateTime, default=lambda: datetime.now(EET))  # Set timezone to EET (UTC+2)
-    likes = db.Column(db.Integer, default=0)  # Number of likes
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Add this line
-    user = db.relationship('User', backref=db.backref('posts', lazy=True))     # Add this line
-    comments = db.relationship('Comment', primaryjoin="and_(Comment.post_id==Post.id, Comment.parent_id==None)", backref='post', lazy=True)
-    # In your Post class, add this method:
+    date_created = db.Column(db.DateTime, default=lambda: datetime.now(EET))  
+    likes = db.Column(db.Integer, default=0) 
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  
+    user = db.relationship('User', backref=db.backref('posts', lazy=True))    
+    comments = db.relationship(
+        'Comment',
+        primaryjoin="and_(Comment.post_id==Post.id, Comment.parent_id==None)",
+        order_by="Comment.like_count.desc()",  # Add ordering
+        backref='post',
+        lazy=True
+    )
+
     def get_comment_count(self):
-        # Count top-level comments
         top_level_count = len(self.comments)
-        # Count replies
         replies_count = sum(len(comment.replies) for comment in self.comments)
         return top_level_count + replies_count
-
 
     def __repr__(self):
         return '<Task %r>' % self.id
@@ -107,25 +109,105 @@ class Message(db.Model):
     timestamp = db.Column(db.DateTime, default=lambda: datetime.now(EET))  # Set timezone to EET (UTC+2)
 
 # Helper function for comment numbering
-def assign_user_numbers(comments):
+def assign_user_numbers(comments, post_creator_id):
     user_numbers = {}
     counter = 1
     for comment in comments:
-        if comment.user_id not in user_numbers:
+        if comment.user_id == post_creator_id:
+            comment.user_number = 'OP'
+        elif comment.user_id not in user_numbers:
             user_numbers[comment.user_id] = counter
             counter += 1
-        comment.user_number = user_numbers[comment.user_id]
+            comment.user_number = user_numbers[comment.user_id]
+        else:
+            comment.user_number = user_numbers[comment.user_id]
 
         for reply in comment.replies:
-            if reply.user_id not in user_numbers:
+            if reply.user_id == post_creator_id:
+                reply.user_number = 'OP'
+            elif reply.user_id not in user_numbers:
                 user_numbers[reply.user_id] = counter
                 counter += 1
-            reply.user_number = user_numbers[reply.user_id]
+                reply.user_number = user_numbers[reply.user_id]
+            else:
+                reply.user_number = user_numbers[reply.user_id]
     return user_numbers
 
 
 
 # Routes
+
+@app.route('/api/posts')
+@login_required
+def get_posts():
+    page = request.args.get('page', 1, type=int)
+    per_page = 10  # Number of posts per request
+    sort_by = request.args.get('sort_by', 'newest')
+    
+    # Calculate offset
+    offset = (page - 1) * per_page
+    
+    # Query based on sort parameter
+    if sort_by == 'likes':
+        posts = Post.query.order_by(Post.likes.desc(), Post.date_created.desc())
+    elif sort_by == 'most_liked_today':
+        today_start = datetime.now(EET).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = datetime.now(EET).replace(hour=23, minute=59, second=59, microsecond=999999)
+        posts = Post.query.filter(Post.date_created.between(today_start, today_end))\
+            .order_by(Post.likes.desc(), Post.date_created.desc())
+    else:  # Default to newest
+        posts = Post.query.order_by(Post.date_created.desc())
+    
+    # Apply pagination
+    posts = posts.offset(offset).limit(per_page).all()
+    
+    # Convert posts to JSON
+    posts_data = []
+    current_time = datetime.now(EET)
+    for post in posts:
+        posts_data.append({
+            'id': post.id,
+            'content': post.content,
+            'date_created': post.date_created.strftime('%Y-%m-%d %H:%M'),
+            'likes': post.likes,
+            'comment_count': post.get_comment_count(),
+            'user_id': post.user_id,
+            'username': post.user.username  # Add username for display
+        })
+    
+    return jsonify(posts_data)
+
+@app.route('/api/my_posts')
+@login_required
+def get_my_posts():
+    page = request.args.get('page', 1, type=int)
+    per_page = 10  # Number of posts per request
+    
+    # Calculate offset
+    offset = (page - 1) * per_page
+    
+    # Query user's posts with pagination
+    posts = Post.query.filter_by(user_id=current_user.id)\
+        .order_by(Post.date_created.desc())\
+        .offset(offset)\
+        .limit(per_page)\
+        .all()
+    
+    # Convert posts to JSON
+    posts_data = []
+    for post in posts:
+        posts_data.append({
+            'id': post.id,
+            'content': post.content,
+            'date_created': post.date_created.strftime('%Y-%m-%d %H:%M'),
+            'likes': post.likes,
+            'comment_count': post.get_comment_count(),
+            'username': post.user.username
+        })
+    
+    return jsonify(posts_data)
+
+
 @app.route('/')
 @login_required
 def index():
@@ -258,12 +340,23 @@ def dashboard():
     return render_template('dashboard.html', user=current_user)
 
 
+# Update route with correct parameter
 @app.route('/post/<int:id>')
 def view_post(id):
     post = Post.query.get_or_404(id)
-    top_level_comments = Comment.query.filter_by(post_id=id, parent_id=None).all()
-    user_numbers = assign_user_numbers(top_level_comments)
-    return render_template('view_post.html', post=post, comments=top_level_comments, user_numbers=user_numbers)
+    # Get comments and sort by like_count in descending order
+    top_level_comments = Comment.query.filter_by(
+        post_id=id, 
+        parent_id=None
+    ).order_by(
+        Comment.like_count.desc()
+    ).all()
+    
+    user_numbers = assign_user_numbers(top_level_comments, post.user_id)
+    return render_template('view_post.html', 
+                         post=post, 
+                         comments=top_level_comments, 
+                         user_numbers=user_numbers)
 
 @app.context_processor
 def inject_current_path():
@@ -363,11 +456,12 @@ def handle_message(data):
 
 
 
-
-#Error handlers
-@app.errorhandler(404)
-def page_not_found(e):
-    return render_template('404.html'), 404
+# Error handlers
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'error': 'CSRF token is missing or invalid'}), 400
+    return render_template('error.html', error='CSRF token is missing or invalid'), 400
 
 @app.errorhandler(500)
 def internal_server_error(e):

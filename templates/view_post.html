@@ -1,5 +1,10 @@
 {% extends 'base.html' %}
 
+{%block head %}
+
+{% endblock %}
+
+
 {% block body %}
 <div class="container mt-5">
 
@@ -37,7 +42,13 @@
         
             <li>
                 <div class="card mb-3 shadow-sm">
-                    <p class="fw-bold ms-2">Commenter #{{ user_numbers[comment.user_id] }}</p>
+                    <p class="fw-bold ms-2">
+                        {% if comment.user_number == 'OP' %}
+                            Original poster
+                        {% else %}
+                            Commenter #{{ comment.user_number }}
+                        {% endif %}
+                    </p>
                     <p class="ms-2" style="word-wrap: break-word; white-space: normal;">
                         {{ comment.content | nl2br | safe }}
                     </p>
@@ -71,12 +82,18 @@
                         {% for reply in comment.replies %}
                             <li>
                                 <div class="card mb-3 shadow-sm">
-                                    <p class="fw-bold ms-2">Reply by Commenter #{{ user_numbers[reply.user_id] }}</p>
+                                    <p class="fw-bold ms-2">
+                                        {% if reply.user_number == 'OP' %}
+                                            Original Poster
+                                        {% else %}
+                                            Reply by Commenter #{{ comment.user_number }}
+                                        {% endif %}
+                                    </p>
                                     <p class="ms-2" style="word-wrap: break-word; white-space: normal;">
                                         {{ reply.content | nl2br | safe }}
                                     </p>
                                     <div class="d-flex align-items-center gap-2 ms-2">
-                                        <form method="POST" action="{{ url_for('like_comment', comment_id=reply.id) }}" class="mb-2 ">
+                                        <form method="POST" action="{{ url_for('like_comment', comment_id=reply.id) }}" class="mb-2 like-form">
                                             <button type="submit" class="btn btn-outline-primary btn-sm">
                                                 👍 Like ({{ reply.like_count }})
                                             </button>

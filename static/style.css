@@ -10935,6 +10935,7 @@ body.sb-sidenav-toggled #wrapper #sidebar-wrapper {
   max-width: 70%;
   word-wrap: break-word;
   display: inline-block;
+  min-width: 150px;
 }
 
 .message .username {
@@ -10946,6 +10947,17 @@ body.sb-sidenav-toggled #wrapper #sidebar-wrapper {
 
 .message .content {
   color: #e0e0e0; /* Light gray for message content */
+  width: 100%;
+  display: block;
+  text-decoration: none;
+}
+
+.message.current-user .content {
+  text-align: left;
+}
+
+.message.other-user .content {
+  text-align: left;
 }
 
 .message .timestamp {
@@ -10970,7 +10982,7 @@ body.sb-sidenav-toggled #wrapper #sidebar-wrapper {
 
 .username {
   font-weight: bold;
-  margin-bottom: 5px;
+  margin-bottom: 1px;
   font-size: 0.9em;
   color: rgba(0, 0, 0, 0.7); /* Light text for username */
 }
@@ -10980,8 +10992,9 @@ body.sb-sidenav-toggled #wrapper #sidebar-wrapper {
   font-size: 0.8em;
   color: rgba(0, 0, 0, 0.6);
   display: block;
-  margin: 5px;
+ 
 }
+
 
 /* Input container fixed at the bottom */
 #input-container {

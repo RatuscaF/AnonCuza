@@ -11,27 +11,29 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.js"></script>
-
     {%block head %}{% endblock %}
     <link rel="stylesheet" href="{{ url_for('static', filename= 'style.css')}}">
 
     <script>
-        if (window.location.pathname === '/') {
-            // Save and restore scroll position
-            
+        document.addEventListener('DOMContentLoaded', () => {
+            // Save scroll position before navigating away
             window.addEventListener('beforeunload', function () {
-                sessionStorage.setItem('scrollPosition', window.scrollY);
+                const scrollPosition = window.scrollY;
+                sessionStorage.setItem('scrollPosition', scrollPosition);
             });
-
-            window.addEventListener('load', function () {
-                const scrollPosition = sessionStorage.getItem('scrollPosition');
-                if (scrollPosition !== null) {
-                    window.scrollTo({ top: parseInt(scrollPosition, 10), behavior: 'auto' });
-                }
-            });
-           
-        }
+    
+            // Restore scroll position when the page loads
+            const scrollPosition = sessionStorage.getItem('scrollPosition');
+            if (scrollPosition !== null) {
+                window.scrollTo({ top: parseInt(scrollPosition, 10), behavior: 'auto' });
+                sessionStorage.removeItem('scrollPosition'); // Clear after restoring
+            }
+    
+        });
     </script>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script src="{{ url_for('static', filename='js/ajax_handlers.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/infinite_scroll.js') }}"></script>
 </head>
 
 <body>
