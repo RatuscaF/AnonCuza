@@ -9,7 +9,7 @@ from datetime import datetime, timezone, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
 from dotenv import load_dotenv
-from flask_wtf.csrf import CSRFProtect, CSRFError
+
 
 EET = timezone(timedelta(hours=2))  # Standard time (UTC +2)
 EEST = timezone(timedelta(hours=3))  # Daylight saving time (UTC +3)
@@ -24,15 +24,13 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'ratuscaEfrumoasa')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=364)  
 app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=364) 
-app.config['WTF_CSRF_CHECK_DEFAULT'] = False  # Disable default CSRF checking
+
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 db = SQLAlchemy(app)
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'login' 
-
-csrf = CSRFProtect(app)
 
 socketio = SocketIO(app, cors_allowed_origins="*")  
 
@@ -453,15 +451,6 @@ def handle_message(data):
             'username': current_user.username  # Pass username for display
         }, broadcast=True)
 
-
-
-
-# Error handlers
-@app.errorhandler(CSRFError)
-def handle_csrf_error(e):
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify({'error': 'CSRF token is missing or invalid'}), 400
-    return render_template('error.html', error='CSRF token is missing or invalid'), 400
 
 @app.errorhandler(500)
 def internal_server_error(e):
